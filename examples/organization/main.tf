@@ -12,10 +12,8 @@ provider "workos" {
 }
 
 resource "workos_organization" "example" {
-  name = "Provided Org"
-  domains = [{
-    domain = "provided-org.co"
-  }]
+  name = "Provided Org by Terraform"
+  domains = ["provided-org.org", "provided-org.ua"]
 }
 
 output "example_organizations" {

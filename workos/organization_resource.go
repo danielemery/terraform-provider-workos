@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/workos/workos-go/pkg/organizations"
 )
 
@@ -52,19 +53,9 @@ func (r *organizationResource) Schema(_ context.Context, _ resource.SchemaReques
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"domains": schema.ListNestedAttribute{
-				Required: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{
-							Computed: true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
-						},
-						"domain": schema.StringAttribute{Required: true},
-					},
-				},
+			"domains": schema.ListAttribute{
+				Required:    true,
+				ElementType: types.StringType,
 			},
 			"created_at": schema.StringAttribute{
 				Computed: true,
@@ -87,7 +78,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 
 	var domains []string
 	for _, domain := range plan.Domains {
-		domains = append(domains, domain.Domain.ValueString())
+		domains = append(domains, domain.ValueString())
 	}
 	allowProfilesOutsideOrganization := false
 	if !plan.AllowProfilesOutsideOrganization.IsNull() {
@@ -148,7 +139,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 
 	var domains []string
 	for _, domain := range plan.Domains {
-		domains = append(domains, domain.Domain.ValueString())
+		domains = append(domains, domain.ValueString())
 	}
 	allowProfilesOutsideOrganization := false
 	if !plan.AllowProfilesOutsideOrganization.IsNull() {

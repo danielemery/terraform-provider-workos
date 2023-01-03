@@ -29,17 +29,12 @@ type organizationsDataSourceModel struct {
 }
 
 type organizationModel struct {
-	ID                               types.String  `tfsdk:"id"`
-	Name                             types.String  `tfsdk:"name"`
-	AllowProfilesOutsideOrganization types.Bool    `tfsdk:"allow_profiles_outside_organization"`
-	Domains                          []domainModel `tfsdk:"domains"`
-	CreatedAt                        types.String  `tfsdk:"created_at"`
-	UpdatedAt                        types.String  `tfsdk:"updated_at"`
-}
-
-type domainModel struct {
-	ID     types.String `tfsdk:"id"`
-	Domain types.String `tfsdk:"domain"`
+	ID                               types.String   `tfsdk:"id"`
+	Name                             types.String   `tfsdk:"name"`
+	AllowProfilesOutsideOrganization types.Bool     `tfsdk:"allow_profiles_outside_organization"`
+	Domains                          []types.String `tfsdk:"domains"`
+	CreatedAt                        types.String   `tfsdk:"created_at"`
+	UpdatedAt                        types.String   `tfsdk:"updated_at"`
 }
 
 func (d *organizationsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -66,14 +61,9 @@ func (d *organizationsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 						"id":                                  schema.StringAttribute{Computed: true},
 						"name":                                schema.StringAttribute{Computed: true},
 						"allow_profiles_outside_organization": schema.BoolAttribute{Computed: true},
-						"domains": schema.ListNestedAttribute{
-							Computed: true,
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"id":     schema.StringAttribute{Computed: true},
-									"domain": schema.StringAttribute{Computed: true},
-								},
-							},
+						"domains": schema.ListAttribute{
+							Computed:    true,
+							ElementType: types.StringType,
 						},
 						"created_at": schema.StringAttribute{Computed: true},
 						"updated_at": schema.StringAttribute{Computed: true},
@@ -116,10 +106,7 @@ func buildOrganizationState(organization workosOrganizations.Organization) organ
 		UpdatedAt:                        types.StringValue(organization.UpdatedAt),
 	}
 	for _, domain := range organization.Domains {
-		organizationState.Domains = append(organizationState.Domains, domainModel{
-			ID:     types.StringValue(domain.ID),
-			Domain: types.StringValue(domain.Domain),
-		})
+		organizationState.Domains = append(organizationState.Domains, types.StringValue(domain.Domain))
 	}
 	return organizationState
 }
