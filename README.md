@@ -1,8 +1,8 @@
-# Terraform Provider Hashicups
+# Terraform Provider WorkOS
 
-This repo is a companion repo to the [Call APIs with Terraform Providers](https://learn.hashicorp.com/collections/terraform/providers) Learn collection. 
+This provider should be used to manage WorkOS.
 
-In the collection, you will use the HashiCups provider as a bridge between Terraform and the HashiCups API. Then, extend Terraform by recreating the HashiCups provider. By the end of this collection, you will be able to take these intuitions to create your own custom Terraform provider. 
+Warning: this project has been made for educational purpose and is not guaranteed to be continued.
 
 ## Build provider
 
