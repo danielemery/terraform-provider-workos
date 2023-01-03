@@ -1,11 +1,11 @@
 terraform {
   required_providers {
-    hashicups = {
-      source = "hashicorp.com/edu/hashicups-pf"
+    workos = {
+      source = "hashicorp.com/aleshchynskyi/workos"
     }
   }
 }
 
-provider "hashicups" {}
+provider "workos" {}
 
-data "hashicups_coffees" "example" {}
+data "workos_organizations" "example" {}
