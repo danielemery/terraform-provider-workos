@@ -32,6 +32,7 @@ type workosProvider struct{}
 
 // workosProviderModel maps provider schema data to a Go type.
 type workosProviderModel struct {
+	Host   types.String `tfsdk:"host"`
 	ApiKey types.String `tfsdk:"api_key"`
 }
 
@@ -44,6 +45,9 @@ func (p *workosProvider) Metadata(_ context.Context, _ provider.MetadataRequest,
 func (p *workosProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"host": schema.StringAttribute{
+				Optional: true,
+			},
 			"api_key": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
@@ -69,10 +73,19 @@ func (p *workosProvider) Configure(ctx context.Context, req provider.ConfigureRe
 				"Either target apply the source of the value first, set the value statically in the configuration, or use the WORKOS_API_KEY environment variable.")
 	}
 
+	if config.Host.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("host"),
+			"Unknown WorkOS API Host",
+			"The provider cannot create the WorkOS API client as there is an unknown configuration value for the WorkOS API host. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the WORKOS_API_HOST environment variable.")
+	}
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	host := os.Getenv("WORKOS_API_HOST")
 	apiKey := os.Getenv("WORKOS_API_KEY")
 
 	if !config.ApiKey.IsNull() {
@@ -94,6 +107,9 @@ func (p *workosProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	organizations.SetAPIKey(apiKey)
+	if host != "" {
+		organizations.DefaultClient.Endpoint = host
+	}
 
 	client := &workosClient{
 		Organizations: organizations.DefaultClient,

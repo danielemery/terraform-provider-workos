@@ -6,6 +6,8 @@ terraform {
   }
 }
 
-provider "workos" {}
+provider "workos" {
+  host = "https://api.workos.com"
+}
 
 data "workos_organizations" "example" {}
