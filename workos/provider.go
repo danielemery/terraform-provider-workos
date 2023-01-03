@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/workos/workos-go/pkg/organizations"
 	"os"
 
@@ -56,8 +57,9 @@ func (p *workosProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 	}
 }
 
-// Configure prepares a HashiCups API client for data sources and resources.
+// Configure prepares a WorkOS API client for data sources and resources.
 func (p *workosProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	tflog.Info(ctx, "Configuring WorkOS client")
 	var config workosProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -92,6 +94,10 @@ func (p *workosProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		apiKey = config.ApiKey.ValueString()
 	}
 
+	if !config.Host.IsNull() {
+		host = config.Host.ValueString()
+	}
+
 	if apiKey == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
@@ -106,6 +112,9 @@ func (p *workosProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
+	ctx = tflog.SetField(ctx, "workos_host", host)
+	ctx = tflog.SetField(ctx, "workos_api_key", apiKey)
+	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "workos_api_key")
 	organizations.SetAPIKey(apiKey)
 	if host != "" {
 		organizations.DefaultClient.Endpoint = host
@@ -116,6 +125,7 @@ func (p *workosProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 	resp.DataSourceData = client
 	resp.ResourceData = client
+	tflog.Info(ctx, "Configured WorkOS client", map[string]any{"success": true})
 }
 
 // DataSources defines the data sources implemented in the provider.
