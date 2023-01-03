@@ -4,6 +4,9 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/workos/workos-go/pkg/organizations"
 )
 
@@ -35,19 +38,40 @@ func (r *organizationResource) Metadata(_ context.Context, req resource.Metadata
 func (r *organizationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":                                  schema.StringAttribute{Computed: true},
-			"name":                                schema.StringAttribute{Required: true},
-			"allow_profiles_outside_organization": schema.BoolAttribute{Computed: true, Optional: true},
+			"id": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"name": schema.StringAttribute{Required: true},
+			"allow_profiles_outside_organization": schema.BoolAttribute{
+				Computed: true,
+				Optional: true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"domains": schema.ListNestedAttribute{
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":     schema.StringAttribute{Computed: true},
+						"id": schema.StringAttribute{
+							Computed: true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
 						"domain": schema.StringAttribute{Required: true},
 					},
 				},
 			},
-			"created_at": schema.StringAttribute{Computed: true},
+			"created_at": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"updated_at": schema.StringAttribute{Computed: true},
 		},
 	}
@@ -114,7 +138,43 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 
 }
 
-func (r *organizationResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
+func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan organizationModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var domains []string
+	for _, domain := range plan.Domains {
+		domains = append(domains, domain.Domain.ValueString())
+	}
+	allowProfilesOutsideOrganization := false
+	if !plan.AllowProfilesOutsideOrganization.IsNull() {
+		allowProfilesOutsideOrganization = plan.AllowProfilesOutsideOrganization.ValueBool()
+	}
+	organization, err := r.client.UpdateOrganization(ctx, organizations.UpdateOrganizationOpts{
+		Organization:                     plan.ID.ValueString(),
+		Name:                             plan.Name.ValueString(),
+		AllowProfilesOutsideOrganization: allowProfilesOutsideOrganization,
+		Domains:                          domains,
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating organization",
+			"Could not update organization, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	state := buildOrganizationState(organization)
+
+	diags = resp.State.Set(ctx, state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r *organizationResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
