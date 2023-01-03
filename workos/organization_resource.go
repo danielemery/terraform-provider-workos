@@ -168,5 +168,22 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 }
 
-func (r *organizationResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
+func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state organizationModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.client.DeleteOrganization(ctx, organizations.DeleteOrganizationOpts{
+		Organization: state.ID.ValueString(),
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting organization",
+			"Could not delete organization, unexpected error: "+err.Error(),
+		)
+		return
+	}
 }
