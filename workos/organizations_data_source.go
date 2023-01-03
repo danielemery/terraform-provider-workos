@@ -95,19 +95,7 @@ func (d *organizationsDataSource) Read(ctx context.Context, _ datasource.ReadReq
 	}
 
 	for _, organization := range organizations.Data {
-		organizationState := organizationModel{
-			ID:                               types.StringValue(organization.ID),
-			Name:                             types.StringValue(organization.Name),
-			AllowProfilesOutsideOrganization: types.BoolValue(organization.AllowProfilesOutsideOrganization),
-			CreatedAt:                        types.StringValue(organization.CreatedAt),
-			UpdatedAt:                        types.StringValue(organization.UpdatedAt),
-		}
-		for _, domain := range organization.Domains {
-			organizationState.Domains = append(organizationState.Domains, domainModel{
-				ID:     types.StringValue(domain.ID),
-				Domain: types.StringValue(domain.Domain),
-			})
-		}
+		organizationState := buildOrganizationState(organization)
 		state.Organizations = append(state.Organizations, organizationState)
 	}
 
@@ -117,4 +105,21 @@ func (d *organizationsDataSource) Read(ctx context.Context, _ datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func buildOrganizationState(organization workosOrganizations.Organization) organizationModel {
+	organizationState := organizationModel{
+		ID:                               types.StringValue(organization.ID),
+		Name:                             types.StringValue(organization.Name),
+		AllowProfilesOutsideOrganization: types.BoolValue(organization.AllowProfilesOutsideOrganization),
+		CreatedAt:                        types.StringValue(organization.CreatedAt),
+		UpdatedAt:                        types.StringValue(organization.UpdatedAt),
+	}
+	for _, domain := range organization.Domains {
+		organizationState.Domains = append(organizationState.Domains, domainModel{
+			ID:     types.StringValue(domain.ID),
+			Domain: types.StringValue(domain.Domain),
+		})
+	}
+	return organizationState
 }
