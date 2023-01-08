@@ -1,5 +1,6 @@
 .DS_Store
 vendor
+dist
 
 terraform-provider-hashicups
 bin
@@ -38,3 +39,4 @@ override.tf.json
 .terraformrc
 terraform.rc
 terraform
+.idea
