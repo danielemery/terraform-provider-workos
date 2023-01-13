@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     workos = {
-      source = "hashicorp.com/aleshchynskyi/workos"
+      source = "vellanci/workos"
     }
   }
   required_version = ">= 1.1.0"

@@ -9,6 +9,6 @@ import (
 
 func main() {
 	providerserver.Serve(context.Background(), workos.New, providerserver.ServeOpts{
-		Address: "registry.terraform.io/aleshchynskyi/workos",
+		Address: "registry.terraform.io/vellanci/workos",
 	})
 }
