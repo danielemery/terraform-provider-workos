@@ -25,6 +25,7 @@ type organizationsDataSource struct {
 }
 
 type organizationsDataSourceModel struct {
+	ID            types.String        `tfsdk:"id"`
 	Organizations []organizationModel `tfsdk:"organizations"`
 }
 
@@ -54,6 +55,7 @@ func (d *organizationsDataSource) Metadata(_ context.Context, req datasource.Met
 func (d *organizationsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{Computed: true},
 			"organizations": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
