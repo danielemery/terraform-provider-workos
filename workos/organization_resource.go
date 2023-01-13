@@ -2,6 +2,8 @@ package workos
 
 import (
 	"context"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,6 +18,7 @@ var (
 	_ resource.Resource                = &organizationResource{}
 	_ resource.ResourceWithConfigure   = &organizationResource{}
 	_ resource.ResourceWithImportState = &organizationResource{}
+	_ resource.ResourceWithModifyPlan  = &organizationResource{}
 )
 
 func NewOrganizationResource() resource.Resource {
@@ -192,4 +195,29 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 
 func (r *organizationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func (r *organizationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	var domainsPlan []types.String
+	var domainsState []types.String
+	domainsPath := path.Root("domains")
+	diags := req.Plan.GetAttribute(ctx, domainsPath, &domainsPlan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	diags = req.State.GetAttribute(ctx, domainsPath, &domainsState)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	less := func(a, b types.String) bool { return a.ValueString() < b.ValueString() }
+	if cmp.Equal(domainsState, domainsPlan, cmpopts.SortSlices(less)) {
+		diags = resp.Plan.SetAttribute(ctx, domainsPath, domainsState)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 }

@@ -3,6 +3,7 @@ module terraform-provider-workos
 go 1.18
 
 require (
+	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/terraform-plugin-framework v1.0.1
 	github.com/hashicorp/terraform-plugin-log v0.7.0
 	github.com/workos/workos-go v1.21.0
