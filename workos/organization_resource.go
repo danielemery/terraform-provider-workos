@@ -7,11 +7,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/workos/workos-go/pkg/organizations"
+	"terraform-provider-workos/workos/planmodifiers"
 )
 
 var (
@@ -55,7 +56,7 @@ func (r *organizationResource) Schema(_ context.Context, _ resource.SchemaReques
 				Computed: true,
 				Optional: true,
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.UseStateForUnknown(),
+					planmodifiers.BoolDefault(false),
 				},
 			},
 			"domains": schema.ListAttribute{
@@ -103,6 +104,7 @@ func (r *organizationResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	state := buildOrganizationState(organization)
+	normalizeDomains(ctx, &plan, &state)
 
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -131,7 +133,6 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	state = buildOrganizationState(organization)
-
 }
 
 func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -165,6 +166,7 @@ func (r *organizationResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	state := buildOrganizationState(organization)
+	normalizeDomains(ctx, &plan, &state)
 
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -198,26 +200,50 @@ func (r *organizationResource) ImportState(ctx context.Context, req resource.Imp
 }
 
 func (r *organizationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	var domainsPlan []types.String
-	var domainsState []types.String
-	domainsPath := path.Root("domains")
-	diags := req.Plan.GetAttribute(ctx, domainsPath, &domainsPlan)
+	var plan *organizationModel
+	var state *organizationModel
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	diags = req.State.GetAttribute(ctx, domainsPath, &domainsState)
+	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	if resp.Diagnostics.HasError() || state == nil || plan == nil {
 		return
 	}
 
+	normalizeDomains(ctx, state, plan)
+	normalizeUpdatedAt(ctx, state, plan)
+
+	diags = resp.Plan.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func normalizeDomains(ctx context.Context, from *organizationModel, to *organizationModel) {
+	if areStringListsEqual(from.Domains, to.Domains) {
+		tflog.Debug(ctx, "Reuse domains", map[string]interface{}{
+			"from": from.Domains,
+			"to":   to.Domains,
+		})
+		to.Domains = from.Domains
+	}
+}
+
+func areStringListsEqual(stateDomains []types.String, planDomains []types.String) bool {
 	less := func(a, b types.String) bool { return a.ValueString() < b.ValueString() }
-	if cmp.Equal(domainsState, domainsPlan, cmpopts.SortSlices(less)) {
-		diags = resp.Plan.SetAttribute(ctx, domainsPath, domainsState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	return cmp.Equal(stateDomains, planDomains, cmpopts.SortSlices(less))
+}
+
+func normalizeUpdatedAt(ctx context.Context, state *organizationModel, plan *organizationModel) {
+	if cmp.Equal(state, plan, cmpopts.IgnoreFields(organizationModel{}, "UpdatedAt")) {
+		tflog.Debug(ctx, "No changes, reuse UpdatedAt from state", map[string]interface{}{
+			"state": state.UpdatedAt,
+			"plan":  plan.UpdatedAt,
+		})
+		plan.UpdatedAt = state.UpdatedAt
 	}
 }
